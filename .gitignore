@@ -1,0 +1,7 @@
+node_modules/
+uploads/
+records.db
+records.db-shm
+records.db-wal
+*.db-journal
+.env

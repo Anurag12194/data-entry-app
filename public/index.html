@@ -1,0 +1,849 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Records Entry System</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Fraunces:ital,wght@0,300;0,500;0,700;1,300&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #F7F5F0;
+    --surface: #FFFFFF;
+    --surface2: #F0EDE6;
+    --border: #DDD8CE;
+    --border2: #C8C2B5;
+    --text: #1A1714;
+    --text2: #5C5648;
+    --text3: #8C8478;
+    --accent: #2D4A3E;
+    --accent-light: #E8F0ED;
+    --accent2: #7C4A1A;
+    --accent2-light: #F5EDE4;
+    --danger: #8B2020;
+    --danger-light: #F5E8E8;
+    --info: #1A3A5C;
+    --info-light: #E8EFF5;
+    --radius: 8px;
+    --radius-lg: 12px;
+    --mono: 'DM Mono', monospace;
+    --sans: 'DM Sans', sans-serif;
+    --serif: 'Fraunces', serif;
+    --shadow: 0 1px 3px rgba(0,0,0,0.08), 0 1px 2px rgba(0,0,0,0.06);
+    --shadow-md: 0 4px 12px rgba(0,0,0,0.1), 0 2px 4px rgba(0,0,0,0.06);
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: var(--sans); background: var(--bg); color: var(--text); min-height: 100vh; }
+
+  /* Layout */
+  .app { display: grid; grid-template-columns: 260px 1fr; min-height: 100vh; }
+  .sidebar {
+    background: var(--accent);
+    color: #fff;
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+    position: sticky;
+    top: 0;
+    height: 100vh;
+    overflow-y: auto;
+  }
+  .sidebar-header {
+    padding: 28px 24px 20px;
+    border-bottom: 1px solid rgba(255,255,255,0.12);
+  }
+  .sidebar-logo {
+    font-family: var(--serif);
+    font-weight: 700;
+    font-size: 22px;
+    color: #fff;
+    line-height: 1.1;
+    letter-spacing: -0.3px;
+  }
+  .sidebar-logo span { color: rgba(255,255,255,0.55); font-weight: 300; font-size: 13px; display: block; margin-top: 2px; font-family: var(--sans); }
+  .sidebar-nav { padding: 16px 0; flex: 1; }
+  .nav-item {
+    display: flex; align-items: center; gap: 10px;
+    padding: 10px 24px;
+    cursor: pointer;
+    font-size: 14px;
+    color: rgba(255,255,255,0.7);
+    transition: all 0.15s;
+    border-left: 3px solid transparent;
+  }
+  .nav-item:hover { background: rgba(255,255,255,0.08); color: #fff; }
+  .nav-item.active { background: rgba(255,255,255,0.12); color: #fff; border-left-color: #fff; font-weight: 500; }
+  .nav-item svg { opacity: 0.8; flex-shrink: 0; }
+  .sidebar-stats { padding: 16px 24px 24px; border-top: 1px solid rgba(255,255,255,0.12); }
+  .sidebar-stat { margin-bottom: 12px; }
+  .sidebar-stat-label { font-size: 11px; color: rgba(255,255,255,0.5); text-transform: uppercase; letter-spacing: 0.8px; }
+  .sidebar-stat-value { font-size: 24px; font-family: var(--serif); font-weight: 500; color: #fff; }
+
+  .main { display: flex; flex-direction: column; overflow: hidden; }
+
+  /* Top bar */
+  .topbar {
+    background: var(--surface);
+    border-bottom: 1px solid var(--border);
+    padding: 16px 32px;
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    position: sticky;
+    top: 0;
+    z-index: 10;
+  }
+  .topbar-title { font-family: var(--serif); font-size: 20px; font-weight: 500; flex: 1; }
+  .search-wrap { position: relative; flex: 1; max-width: 320px; }
+  .search-wrap input {
+    width: 100%;
+    padding: 8px 12px 8px 36px;
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    font-size: 14px;
+    background: var(--bg);
+    color: var(--text);
+    font-family: var(--sans);
+    outline: none;
+    transition: border-color 0.15s;
+  }
+  .search-wrap input:focus { border-color: var(--accent); }
+  .search-icon { position: absolute; left: 10px; top: 50%; transform: translateY(-50%); opacity: 0.4; }
+  .btn {
+    display: inline-flex; align-items: center; gap: 6px;
+    padding: 8px 16px;
+    border-radius: var(--radius);
+    font-size: 14px;
+    font-family: var(--sans);
+    font-weight: 500;
+    cursor: pointer;
+    border: none;
+    transition: all 0.15s;
+    text-decoration: none;
+  }
+  .btn-primary { background: var(--accent); color: #fff; }
+  .btn-primary:hover { background: #243D33; }
+  .btn-secondary { background: var(--surface); border: 1px solid var(--border2); color: var(--text2); }
+  .btn-secondary:hover { background: var(--surface2); }
+  .btn-danger { background: var(--danger-light); border: 1px solid var(--danger); color: var(--danger); }
+  .btn-danger:hover { background: var(--danger); color: #fff; }
+  .btn-sm { padding: 5px 10px; font-size: 13px; }
+  .btn-icon { padding: 6px; width: 32px; height: 32px; justify-content: center; }
+
+  /* Content */
+  .content { padding: 28px 32px; flex: 1; overflow-y: auto; }
+
+  /* Table */
+  .table-wrap { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-lg); overflow: hidden; box-shadow: var(--shadow); }
+  table { width: 100%; border-collapse: collapse; }
+  thead { background: var(--surface2); }
+  th { padding: 11px 16px; text-align: left; font-size: 11px; font-weight: 500; color: var(--text3); text-transform: uppercase; letter-spacing: 0.7px; border-bottom: 1px solid var(--border); white-space: nowrap; }
+  td { padding: 12px 16px; font-size: 14px; border-bottom: 1px solid var(--border); vertical-align: middle; }
+  tr:last-child td { border-bottom: none; }
+  tr:hover td { background: var(--bg); }
+  .mono { font-family: var(--mono); font-size: 13px; }
+  .empty-row td { text-align: center; padding: 48px; color: var(--text3); font-size: 15px; }
+
+  /* Badges */
+  .badge { display: inline-block; padding: 2px 8px; border-radius: 20px; font-size: 12px; font-weight: 500; }
+  .badge-green { background: var(--accent-light); color: var(--accent); }
+  .badge-amber { background: var(--accent2-light); color: var(--accent2); }
+
+  /* Modal */
+  .overlay {
+    position: fixed; inset: 0; background: rgba(15,12,8,0.55);
+    display: flex; align-items: center; justify-content: center;
+    z-index: 100; padding: 20px;
+    opacity: 0; pointer-events: none; transition: opacity 0.2s;
+  }
+  .overlay.open { opacity: 1; pointer-events: all; }
+  .modal {
+    background: var(--surface);
+    border-radius: var(--radius-lg);
+    width: 100%;
+    max-width: 680px;
+    max-height: 90vh;
+    overflow-y: auto;
+    box-shadow: var(--shadow-md);
+    transform: translateY(8px);
+    transition: transform 0.2s;
+  }
+  .overlay.open .modal { transform: translateY(0); }
+  .modal-header {
+    padding: 24px 28px 16px;
+    border-bottom: 1px solid var(--border);
+    display: flex; align-items: center; justify-content: space-between;
+  }
+  .modal-title { font-family: var(--serif); font-size: 22px; font-weight: 500; }
+  .modal-body { padding: 24px 28px; }
+  .modal-footer { padding: 16px 28px 24px; display: flex; gap: 10px; justify-content: flex-end; border-top: 1px solid var(--border); }
+
+  /* Form */
+  .form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 18px; }
+  .form-group { display: flex; flex-direction: column; gap: 6px; }
+  .form-group.full { grid-column: 1 / -1; }
+  .form-label { font-size: 13px; font-weight: 500; color: var(--text2); }
+  .form-label span { color: var(--danger); margin-left: 2px; }
+  .form-input {
+    padding: 9px 12px;
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    font-size: 14px;
+    font-family: var(--sans);
+    background: var(--bg);
+    color: var(--text);
+    outline: none;
+    transition: border-color 0.15s, box-shadow 0.15s;
+  }
+  .form-input:focus { border-color: var(--accent); box-shadow: 0 0 0 3px rgba(45,74,62,0.1); }
+  .form-input.mono-input { font-family: var(--mono); font-size: 13px; letter-spacing: 0.3px; }
+  .form-hint { font-size: 12px; color: var(--text3); margin-top: -2px; }
+  .form-section { margin-bottom: 4px; }
+  .form-section-title {
+    font-size: 12px; font-weight: 500; color: var(--text3);
+    text-transform: uppercase; letter-spacing: 0.8px;
+    padding-bottom: 12px; margin-bottom: 0;
+    display: flex; align-items: center; gap: 8px;
+  }
+  .form-section-title::after { content: ''; flex: 1; height: 1px; background: var(--border); }
+
+  /* File upload */
+  .upload-zone {
+    border: 2px dashed var(--border2);
+    border-radius: var(--radius-lg);
+    padding: 28px;
+    text-align: center;
+    cursor: pointer;
+    transition: all 0.15s;
+    background: var(--bg);
+  }
+  .upload-zone:hover, .upload-zone.dragover { border-color: var(--accent); background: var(--accent-light); }
+  .upload-zone-icon { font-size: 32px; margin-bottom: 8px; opacity: 0.5; }
+  .upload-zone p { font-size: 14px; color: var(--text2); }
+  .upload-zone p strong { color: var(--accent); }
+  .upload-zone small { font-size: 12px; color: var(--text3); }
+  .file-list { margin-top: 12px; display: flex; flex-direction: column; gap: 6px; }
+  .file-item {
+    display: flex; align-items: center; gap: 10px;
+    padding: 8px 12px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    font-size: 13px;
+  }
+  .file-item-name { flex: 1; truncate: ellipsis; overflow: hidden; white-space: nowrap; }
+  .file-item-size { color: var(--text3); font-family: var(--mono); font-size: 12px; white-space: nowrap; }
+  .file-item-del { cursor: pointer; color: var(--danger); opacity: 0.6; }
+  .file-item-del:hover { opacity: 1; }
+  .file-ext {
+    width: 28px; height: 28px; border-radius: 4px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 9px; font-weight: 700; font-family: var(--mono);
+    background: var(--accent-light); color: var(--accent);
+    flex-shrink: 0; text-transform: uppercase;
+  }
+
+  /* View modal */
+  .detail-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 2px; border: 1px solid var(--border); border-radius: var(--radius-lg); overflow: hidden; margin-bottom: 20px; }
+  .detail-row { display: contents; }
+  .detail-label { padding: 11px 16px; background: var(--surface2); font-size: 13px; color: var(--text3); font-weight: 500; border-bottom: 1px solid var(--border); }
+  .detail-value { padding: 11px 16px; background: var(--surface); font-size: 14px; border-bottom: 1px solid var(--border); }
+  .detail-row:last-child .detail-label,
+  .detail-row:last-child .detail-value { border-bottom: none; }
+
+  /* Pagination */
+  .pagination { display: flex; align-items: center; gap: 8px; justify-content: flex-end; padding: 16px 0 0; }
+  .page-btn {
+    width: 32px; height: 32px; border-radius: var(--radius);
+    border: 1px solid var(--border);
+    background: var(--surface); color: var(--text2);
+    cursor: pointer; font-size: 13px; font-family: var(--sans);
+    display: flex; align-items: center; justify-content: center;
+    transition: all 0.15s;
+  }
+  .page-btn:hover:not(:disabled) { background: var(--surface2); border-color: var(--border2); }
+  .page-btn.active { background: var(--accent); color: #fff; border-color: var(--accent); }
+  .page-btn:disabled { opacity: 0.35; cursor: not-allowed; }
+  .page-info { font-size: 13px; color: var(--text3); }
+
+  /* Toast */
+  .toast-container { position: fixed; bottom: 24px; right: 24px; z-index: 200; display: flex; flex-direction: column; gap: 8px; }
+  .toast {
+    padding: 12px 16px;
+    border-radius: var(--radius);
+    font-size: 14px;
+    box-shadow: var(--shadow-md);
+    min-width: 240px;
+    max-width: 340px;
+    animation: slideIn 0.25s ease-out;
+    display: flex; align-items: center; gap: 10px;
+  }
+  .toast-success { background: var(--accent); color: #fff; }
+  .toast-error { background: var(--danger); color: #fff; }
+  .toast-info { background: var(--info); color: #fff; }
+  @keyframes slideIn { from { transform: translateX(20px); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
+
+  /* Loader */
+  .loader { width: 18px; height: 18px; border: 2px solid rgba(255,255,255,0.3); border-top-color: #fff; border-radius: 50%; animation: spin 0.7s linear infinite; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  .loading-overlay { display: flex; align-items: center; justify-content: center; padding: 40px; gap: 12px; color: var(--text3); font-size: 14px; }
+  .loading-overlay .spin { width: 20px; height: 20px; border: 2px solid var(--border2); border-top-color: var(--accent); border-radius: 50%; animation: spin 0.7s linear infinite; }
+
+  /* Responsive */
+  @media (max-width: 900px) {
+    .app { grid-template-columns: 1fr; }
+    .sidebar { display: none; }
+    .content, .topbar { padding: 16px; }
+    .form-grid { grid-template-columns: 1fr; }
+    .form-group.full { grid-column: 1; }
+    .detail-grid { grid-template-columns: 1fr; }
+  }
+</style>
+</head>
+<body>
+
+<div class="app">
+  <!-- Sidebar -->
+  <aside class="sidebar">
+    <div class="sidebar-header">
+      <div class="sidebar-logo">
+        Records System
+        <span>Data Entry Portal</span>
+      </div>
+    </div>
+    <nav class="sidebar-nav">
+      <div class="nav-item active" onclick="showView('list')">
+        <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="4" rx="1"/><rect x="3" y="10" width="18" height="4" rx="1"/><rect x="3" y="16" width="18" height="4" rx="1"/></svg>
+        All Records
+      </div>
+      <div class="nav-item" onclick="openAddModal()">
+        <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><line x1="12" y1="8" x2="12" y2="16"/><line x1="8" y1="12" x2="16" y2="12"/></svg>
+        Add New Record
+      </div>
+    </nav>
+    <div class="sidebar-stats">
+      <div class="sidebar-stat">
+        <div class="sidebar-stat-label">Total Records</div>
+        <div class="sidebar-stat-value" id="stat-total">—</div>
+      </div>
+      <div class="sidebar-stat">
+        <div class="sidebar-stat-label">Deceased</div>
+        <div class="sidebar-stat-value" id="stat-deceased">—</div>
+      </div>
+      <div class="sidebar-stat">
+        <div class="sidebar-stat-label">Documents Stored</div>
+        <div class="sidebar-stat-value" id="stat-docs">—</div>
+      </div>
+    </div>
+  </aside>
+
+  <!-- Main -->
+  <div class="main">
+    <div class="topbar">
+      <div class="topbar-title" id="view-title">All Records</div>
+      <div class="search-wrap">
+        <svg class="search-icon" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><line x1="16.5" y1="16.5" x2="22" y2="22"/></svg>
+        <input type="text" id="search-input" placeholder="Search by name, EPIC, Aadhaar…" oninput="debounceSearch()">
+      </div>
+      <button class="btn btn-primary" onclick="openAddModal()">
+        <svg width="15" height="15" fill="none" stroke="currentColor" stroke-width="2.2" viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+        Add Record
+      </button>
+    </div>
+
+    <div class="content">
+      <div id="list-view">
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>#</th>
+                <th>Father's Name</th>
+                <th>EPIC No</th>
+                <th>Aadhaar</th>
+                <th>Ration Card</th>
+                <th>DOB</th>
+                <th>Bank A/C</th>
+                <th>Status</th>
+                <th>Actions</th>
+              </tr>
+            </thead>
+            <tbody id="records-table">
+              <tr><td colspan="9" class="loading-overlay"><div class="spin"></div> Loading records…</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <div class="pagination" id="pagination-wrap"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Add / Edit Modal -->
+<div class="overlay" id="form-modal" onclick="closeModalOnBg(event, 'form-modal')">
+  <div class="modal">
+    <div class="modal-header">
+      <div class="modal-title" id="modal-form-title">Add New Record</div>
+      <button class="btn btn-icon btn-secondary" onclick="closeModal('form-modal')">
+        <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+      </button>
+    </div>
+    <div class="modal-body">
+      <input type="hidden" id="edit-id">
+      <div class="form-section">
+        <div class="form-section-title">Identity Information</div>
+      </div>
+      <div class="form-grid" style="margin-bottom: 20px;">
+        <div class="form-group full">
+          <label class="form-label">Father's Name <span>*</span></label>
+          <input class="form-input" id="f-father-name" placeholder="Enter full name">
+        </div>
+        <div class="form-group">
+          <label class="form-label">EPIC No (Voter ID)</label>
+          <input class="form-input mono-input" id="f-epic" placeholder="e.g. ABC1234567">
+          <span class="form-hint">Electoral Photo Identity Card number</span>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Aadhaar Number</label>
+          <input class="form-input mono-input" id="f-aadhaar" placeholder="XXXX XXXX XXXX" maxlength="14" oninput="fmtAadhaar(this)">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Ration Card No</label>
+          <input class="form-input mono-input" id="f-ration" placeholder="Enter ration card number">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Date of Birth</label>
+          <input class="form-input" id="f-dob" type="date">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Date of Death</label>
+          <input class="form-input" id="f-dod" type="date">
+          <span class="form-hint">Leave blank if alive</span>
+        </div>
+      </div>
+
+      <div class="form-section">
+        <div class="form-section-title">Banking Information</div>
+      </div>
+      <div class="form-grid" style="margin-bottom: 24px;">
+        <div class="form-group">
+          <label class="form-label">Bank Account No</label>
+          <input class="form-input mono-input" id="f-bank" placeholder="Enter account number">
+        </div>
+        <div class="form-group">
+          <label class="form-label">CIF Number</label>
+          <input class="form-input mono-input" id="f-cif" placeholder="Customer Information File No">
+          <span class="form-hint">Bank's internal customer ID</span>
+        </div>
+      </div>
+
+      <div class="form-section" id="upload-section">
+        <div class="form-section-title">Documents</div>
+      </div>
+      <div id="upload-area">
+        <div class="upload-zone" id="drop-zone" onclick="document.getElementById('file-input').click()" ondragover="handleDragOver(event)" ondragleave="handleDragLeave(event)" ondrop="handleDrop(event)">
+          <div class="upload-zone-icon">📎</div>
+          <p><strong>Click to upload</strong> or drag & drop files here</p>
+          <small>PDF, JPEG, PNG, DOC · Max 10MB per file · Up to 10 files</small>
+        </div>
+        <input type="file" id="file-input" multiple accept=".pdf,.jpg,.jpeg,.png,.gif,.doc,.docx" style="display:none" onchange="handleFiles(this.files)">
+        <div class="file-list" id="new-file-list"></div>
+        <div id="existing-docs-wrap" style="margin-top: 12px;"></div>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-secondary" onclick="closeModal('form-modal')">Cancel</button>
+      <button class="btn btn-primary" id="save-btn" onclick="saveRecord()">
+        <span id="save-btn-text">Save Record</span>
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- View Modal -->
+<div class="overlay" id="view-modal" onclick="closeModalOnBg(event, 'view-modal')">
+  <div class="modal">
+    <div class="modal-header">
+      <div class="modal-title" id="view-person-name">Record Details</div>
+      <button class="btn btn-icon btn-secondary" onclick="closeModal('view-modal')">
+        <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+      </button>
+    </div>
+    <div class="modal-body">
+      <div class="detail-grid" id="view-detail-grid"></div>
+      <div class="form-section-title" style="font-size:12px;font-weight:500;color:var(--text3);text-transform:uppercase;letter-spacing:0.8px;padding-bottom:12px;display:flex;align-items:center;gap:8px;">
+        Documents
+        <span style="flex:1;height:1px;background:var(--border);display:block;"></span>
+      </div>
+      <div id="view-docs"></div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-danger btn-sm" id="view-delete-btn">Delete Record</button>
+      <button class="btn btn-secondary" onclick="closeModal('view-modal')">Close</button>
+      <button class="btn btn-primary btn-sm" id="view-edit-btn">Edit Record</button>
+    </div>
+  </div>
+</div>
+
+<!-- Delete Confirm Modal -->
+<div class="overlay" id="confirm-modal" onclick="closeModalOnBg(event, 'confirm-modal')">
+  <div class="modal" style="max-width: 400px;">
+    <div class="modal-header">
+      <div class="modal-title" style="color: var(--danger);">Delete Record</div>
+      <button class="btn btn-icon btn-secondary" onclick="closeModal('confirm-modal')">
+        <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+      </button>
+    </div>
+    <div class="modal-body">
+      <p style="color: var(--text2); line-height: 1.6;">This will permanently delete the record and all associated documents. This action cannot be undone.</p>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-secondary" onclick="closeModal('confirm-modal')">Cancel</button>
+      <button class="btn btn-danger" id="confirm-delete-btn">Delete Permanently</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast-container" id="toast-container"></div>
+
+<script>
+const API = '/api';
+let currentPage = 1;
+let searchQuery = '';
+let searchTimer;
+let pendingFiles = [];
+let currentViewId = null;
+
+// ── Utils ─────────────────────────────────────────────────────────────────────
+function fmtAadhaar(input) {
+  let v = input.value.replace(/\D/g, '').substring(0, 12);
+  input.value = v.replace(/(\d{4})(?=\d)/g, '$1 ').trim();
+}
+
+function formatDate(d) {
+  if (!d) return '—';
+  const dt = new Date(d);
+  return dt.toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' });
+}
+
+function formatBytes(bytes) {
+  if (bytes < 1024) return bytes + ' B';
+  if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + ' KB';
+  return (bytes / (1024 * 1024)).toFixed(1) + ' MB';
+}
+
+function getExt(filename) {
+  return filename.split('.').pop().substring(0, 4).toUpperCase();
+}
+
+function toast(msg, type = 'success') {
+  const el = document.createElement('div');
+  el.className = `toast toast-${type}`;
+  el.innerHTML = `<span>${type === 'success' ? '✓' : type === 'error' ? '✕' : 'ℹ'}</span> ${msg}`;
+  document.getElementById('toast-container').appendChild(el);
+  setTimeout(() => el.remove(), 3500);
+}
+
+function closeModal(id) { document.getElementById(id).classList.remove('open'); }
+function closeModalOnBg(e, id) { if (e.target.id === id) closeModal(id); }
+function openModal(id) { document.getElementById(id).classList.add('open'); }
+
+// ── Stats ─────────────────────────────────────────────────────────────────────
+async function loadStats() {
+  try {
+    const r = await fetch(`${API}/stats`);
+    const s = await r.json();
+    document.getElementById('stat-total').textContent = s.total_persons ?? '0';
+    document.getElementById('stat-deceased').textContent = s.deceased ?? '0';
+    document.getElementById('stat-docs').textContent = s.total_documents ?? '0';
+  } catch {}
+}
+
+// ── Records List ──────────────────────────────────────────────────────────────
+async function loadRecords() {
+  const tbody = document.getElementById('records-table');
+  tbody.innerHTML = `<tr><td colspan="9"><div class="loading-overlay"><div class="spin"></div> Loading…</div></td></tr>`;
+
+  const params = new URLSearchParams({ page: currentPage, limit: 20 });
+  if (searchQuery) params.set('search', searchQuery);
+
+  try {
+    const r = await fetch(`${API}/persons?${params}`);
+    const { data, total, limit } = await r.json();
+
+    if (!data.length) {
+      tbody.innerHTML = `<tr><td colspan="9" class="empty-row">📂 No records found${searchQuery ? ' for "' + searchQuery + '"' : ''}.<br><small style="color:var(--text3);font-size:13px;">Click "Add Record" to create the first entry.</small></td></tr>`;
+    } else {
+      tbody.innerHTML = data.map((p, i) => `
+        <tr>
+          <td style="color:var(--text3);font-size:12px;font-family:var(--mono)">${(currentPage - 1) * limit + i + 1}</td>
+          <td style="font-weight:500">${esc(p.father_name)}</td>
+          <td class="mono">${p.epic_no || '<span style="color:var(--text3)">—</span>'}</td>
+          <td class="mono">${p.aadhaar ? maskAadhaar(p.aadhaar) : '<span style="color:var(--text3)">—</span>'}</td>
+          <td class="mono">${p.ration_card || '<span style="color:var(--text3)">—</span>'}</td>
+          <td style="font-size:13px">${formatDate(p.dob)}</td>
+          <td class="mono">${p.bank_ac ? maskAC(p.bank_ac) : '<span style="color:var(--text3)">—</span>'}</td>
+          <td>${p.dod ? '<span class="badge badge-amber">Deceased</span>' : '<span class="badge badge-green">Active</span>'}</td>
+          <td>
+            <div style="display:flex;gap:6px">
+              <button class="btn btn-secondary btn-sm btn-icon" title="View" onclick="viewRecord(${p.id})">
+                <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="12" cy="12" r="2"/><path d="M2 12s4-7 10-7 10 7 10 7-4 7-10 7-10-7-10-7z"/></svg>
+              </button>
+              <button class="btn btn-secondary btn-sm btn-icon" title="Edit" onclick="editRecord(${p.id})">
+                <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+              </button>
+              <button class="btn btn-danger btn-sm btn-icon" title="Delete" onclick="confirmDelete(${p.id})">
+                <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6M14 11v6"/><path d="M9 6V4h6v2"/></svg>
+              </button>
+            </div>
+          </td>
+        </tr>`).join('');
+    }
+
+    renderPagination(total, limit);
+    loadStats();
+  } catch (err) {
+    tbody.innerHTML = `<tr><td colspan="9" class="empty-row" style="color:var(--danger)">⚠ Failed to load records. Make sure the server is running.</td></tr>`;
+  }
+}
+
+function esc(str) {
+  const d = document.createElement('div');
+  d.textContent = str || '';
+  return d.innerHTML;
+}
+
+function maskAadhaar(v) {
+  const clean = v.replace(/\s/g, '');
+  return clean.length === 12 ? 'XXXX XXXX ' + clean.slice(-4) : v;
+}
+
+function maskAC(v) {
+  return v.length > 4 ? 'X'.repeat(v.length - 4) + v.slice(-4) : v;
+}
+
+function renderPagination(total, limit) {
+  const pages = Math.ceil(total / limit);
+  const wrap = document.getElementById('pagination-wrap');
+  if (pages <= 1) { wrap.innerHTML = ''; return; }
+  let html = `<span class="page-info">Showing ${Math.min((currentPage - 1) * limit + 1, total)}–${Math.min(currentPage * limit, total)} of ${total}</span>`;
+  html += `<button class="page-btn" onclick="gotoPage(${currentPage - 1})" ${currentPage === 1 ? 'disabled' : ''}>‹</button>`;
+  for (let p = Math.max(1, currentPage - 2); p <= Math.min(pages, currentPage + 2); p++) {
+    html += `<button class="page-btn ${p === currentPage ? 'active' : ''}" onclick="gotoPage(${p})">${p}</button>`;
+  }
+  html += `<button class="page-btn" onclick="gotoPage(${currentPage + 1})" ${currentPage === pages ? 'disabled' : ''}>›</button>`;
+  wrap.innerHTML = html;
+}
+
+function gotoPage(p) { currentPage = p; loadRecords(); }
+function debounceSearch() {
+  clearTimeout(searchTimer);
+  searchTimer = setTimeout(() => {
+    searchQuery = document.getElementById('search-input').value.trim();
+    currentPage = 1;
+    loadRecords();
+  }, 350);
+}
+
+// ── Add / Edit ────────────────────────────────────────────────────────────────
+function clearForm() {
+  ['f-father-name','f-epic','f-aadhaar','f-ration','f-dob','f-dod','f-bank','f-cif'].forEach(id => {
+    document.getElementById(id).value = '';
+  });
+  document.getElementById('edit-id').value = '';
+  pendingFiles = [];
+  renderNewFileList();
+  document.getElementById('existing-docs-wrap').innerHTML = '';
+}
+
+function openAddModal() {
+  clearForm();
+  document.getElementById('modal-form-title').textContent = 'Add New Record';
+  document.getElementById('save-btn-text').textContent = 'Save Record';
+  openModal('form-modal');
+}
+
+async function editRecord(id) {
+  clearForm();
+  document.getElementById('modal-form-title').textContent = 'Edit Record';
+  document.getElementById('save-btn-text').textContent = 'Update Record';
+  try {
+    const r = await fetch(`${API}/persons/${id}`);
+    const p = await r.json();
+    document.getElementById('edit-id').value = p.id;
+    document.getElementById('f-father-name').value = p.father_name || '';
+    document.getElementById('f-epic').value = p.epic_no || '';
+    document.getElementById('f-aadhaar').value = p.aadhaar || '';
+    document.getElementById('f-ration').value = p.ration_card || '';
+    document.getElementById('f-dob').value = p.dob || '';
+    document.getElementById('f-dod').value = p.dod || '';
+    document.getElementById('f-bank').value = p.bank_ac || '';
+    document.getElementById('f-cif').value = p.cif || '';
+    renderExistingDocs(p.documents || []);
+    openModal('form-modal');
+  } catch { toast('Failed to load record', 'error'); }
+}
+
+function renderExistingDocs(docs) {
+  const wrap = document.getElementById('existing-docs-wrap');
+  if (!docs.length) { wrap.innerHTML = ''; return; }
+  wrap.innerHTML = `<div style="font-size:12px;color:var(--text3);margin-bottom:8px;font-weight:500">EXISTING DOCUMENTS</div>` +
+    docs.map(d => `
+      <div class="file-item">
+        <div class="file-ext">${getExt(d.original_name)}</div>
+        <span class="file-item-name">${esc(d.original_name)}</span>
+        <span class="file-item-size">${formatBytes(d.file_size)}</span>
+        <a href="${API}/documents/${d.id}/download" class="btn btn-secondary btn-sm" style="padding:3px 8px;font-size:12px;" download>↓</a>
+        <span class="file-item-del" onclick="deleteExistingDoc(${d.id}, this)" title="Remove">✕</span>
+      </div>`).join('');
+}
+
+async function deleteExistingDoc(docId, el) {
+  if (!confirm('Remove this document?')) return;
+  try {
+    await fetch(`${API}/documents/${docId}`, { method: 'DELETE' });
+    el.closest('.file-item').remove();
+    toast('Document removed');
+  } catch { toast('Failed to remove document', 'error'); }
+}
+
+async function saveRecord() {
+  const name = document.getElementById('f-father-name').value.trim();
+  if (!name) { toast('Father\'s name is required', 'error'); return; }
+
+  const editId = document.getElementById('edit-id').value;
+  const body = {
+    father_name: name,
+    epic_no: document.getElementById('f-epic').value.trim(),
+    aadhaar: document.getElementById('f-aadhaar').value.trim(),
+    ration_card: document.getElementById('f-ration').value.trim(),
+    dob: document.getElementById('f-dob').value,
+    dod: document.getElementById('f-dod').value,
+    bank_ac: document.getElementById('f-bank').value.trim(),
+    cif: document.getElementById('f-cif').value.trim(),
+  };
+
+  const btn = document.getElementById('save-btn');
+  btn.innerHTML = '<div class="loader"></div>';
+  btn.disabled = true;
+
+  try {
+    let personId;
+    if (editId) {
+      const r = await fetch(`${API}/persons/${editId}`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
+      const p = await r.json();
+      personId = p.id;
+    } else {
+      const r = await fetch(`${API}/persons`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
+      const p = await r.json();
+      personId = p.id;
+    }
+
+    if (pendingFiles.length > 0) {
+      const fd = new FormData();
+      pendingFiles.forEach(f => fd.append('documents', f));
+      await fetch(`${API}/persons/${personId}/documents`, { method: 'POST', body: fd });
+    }
+
+    toast(editId ? 'Record updated successfully' : 'Record saved successfully');
+    closeModal('form-modal');
+    loadRecords();
+  } catch (err) {
+    toast('Failed to save. Check server connection.', 'error');
+  } finally {
+    btn.innerHTML = `<span id="save-btn-text">${editId ? 'Update Record' : 'Save Record'}</span>`;
+    btn.disabled = false;
+  }
+}
+
+// ── File handling ─────────────────────────────────────────────────────────────
+function handleFiles(files) {
+  Array.from(files).forEach(f => {
+    if (f.size > 10 * 1024 * 1024) { toast(`${f.name} exceeds 10MB`, 'error'); return; }
+    if (pendingFiles.length >= 10) { toast('Max 10 files per upload', 'error'); return; }
+    pendingFiles.push(f);
+  });
+  renderNewFileList();
+}
+
+function renderNewFileList() {
+  const list = document.getElementById('new-file-list');
+  list.innerHTML = pendingFiles.map((f, i) => `
+    <div class="file-item">
+      <div class="file-ext">${getExt(f.name)}</div>
+      <span class="file-item-name">${esc(f.name)}</span>
+      <span class="file-item-size">${formatBytes(f.size)}</span>
+      <span class="file-item-del" onclick="removePendingFile(${i})" title="Remove">✕</span>
+    </div>`).join('');
+}
+
+function removePendingFile(i) { pendingFiles.splice(i, 1); renderNewFileList(); }
+
+function handleDragOver(e) { e.preventDefault(); document.getElementById('drop-zone').classList.add('dragover'); }
+function handleDragLeave() { document.getElementById('drop-zone').classList.remove('dragover'); }
+function handleDrop(e) {
+  e.preventDefault();
+  document.getElementById('drop-zone').classList.remove('dragover');
+  handleFiles(e.dataTransfer.files);
+}
+
+// ── View record ───────────────────────────────────────────────────────────────
+async function viewRecord(id) {
+  currentViewId = id;
+  try {
+    const r = await fetch(`${API}/persons/${id}`);
+    const p = await r.json();
+    document.getElementById('view-person-name').textContent = p.father_name;
+
+    const fields = [
+      ['Father\'s Name', p.father_name],
+      ['EPIC No (Voter ID)', p.epic_no || '—'],
+      ['Aadhaar', p.aadhaar || '—'],
+      ['Ration Card', p.ration_card || '—'],
+      ['Date of Birth', formatDate(p.dob)],
+      ['Date of Death', p.dod ? formatDate(p.dod) : 'N/A (Alive)'],
+      ['Bank A/C', p.bank_ac || '—'],
+      ['CIF Number', p.cif || '—'],
+      ['Added On', new Date(p.created_at).toLocaleString('en-IN')],
+    ];
+
+    document.getElementById('view-detail-grid').innerHTML = fields.map(([label, val]) => `
+      <div class="detail-label">${label}</div>
+      <div class="detail-value" style="font-family:${['EPIC No (Voter ID)','Aadhaar','Bank A/C','CIF Number'].includes(label) ? 'var(--mono)' : 'inherit'};font-size:${['EPIC No (Voter ID)','Aadhaar','Bank A/C','CIF Number'].includes(label) ? '13px' : '14px'}">${val}</div>`).join('');
+
+    const docs = p.documents || [];
+    document.getElementById('view-docs').innerHTML = docs.length ? docs.map(d => `
+      <div class="file-item" style="margin-bottom:6px">
+        <div class="file-ext">${getExt(d.original_name)}</div>
+        <span class="file-item-name">${esc(d.original_name)}</span>
+        <span class="file-item-size">${formatBytes(d.file_size)}</span>
+        <a href="${API}/documents/${d.id}/download" class="btn btn-secondary btn-sm" download>↓ Download</a>
+      </div>`).join('') : '<p style="color:var(--text3);font-size:13px;padding:8px 0">No documents uploaded.</p>';
+
+    document.getElementById('view-edit-btn').onclick = () => { closeModal('view-modal'); editRecord(id); };
+    document.getElementById('view-delete-btn').onclick = () => { closeModal('view-modal'); confirmDelete(id); };
+    openModal('view-modal');
+  } catch { toast('Failed to load record', 'error'); }
+}
+
+// ── Delete ────────────────────────────────────────────────────────────────────
+function confirmDelete(id) {
+  currentViewId = id;
+  document.getElementById('confirm-delete-btn').onclick = async () => {
+    try {
+      await fetch(`${API}/persons/${id}`, { method: 'DELETE' });
+      toast('Record deleted');
+      closeModal('confirm-modal');
+      loadRecords();
+    } catch { toast('Failed to delete', 'error'); }
+  };
+  openModal('confirm-modal');
+}
+
+function showView(v) { /* only one view for now */ }
+
+// ── Init ──────────────────────────────────────────────────────────────────────
+loadRecords();
+</script>
+</body>
+</html>
