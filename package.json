@@ -4,6 +4,7 @@
   "description": "Records data entry app with document upload",
   "main": "server.js",
   "scripts": {
+    "build": "npm rebuild better-sqlite3",
     "start": "node server.js",
     "dev": "nodemon server.js"
   },
