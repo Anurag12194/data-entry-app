@@ -298,9 +298,91 @@
     .form-group.full { grid-column: 1; }
     .detail-grid { grid-template-columns: 1fr; }
   }
+
+  /* Login Screen */
+  .login-screen {
+    position: fixed; inset: 0;
+    background: var(--bg);
+    display: flex; align-items: center; justify-content: center;
+    z-index: 999;
+    transition: opacity 0.3s;
+  }
+  .login-screen.hidden { opacity: 0; pointer-events: none; }
+  .login-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-lg);
+    padding: 40px 40px 36px;
+    width: 100%; max-width: 380px;
+    box-shadow: var(--shadow-md);
+  }
+  .login-logo {
+    font-family: var(--serif);
+    font-size: 26px; font-weight: 700;
+    color: var(--accent);
+    margin-bottom: 4px;
+    text-align: center;
+  }
+  .login-subtitle {
+    text-align: center;
+    color: var(--text3);
+    font-size: 13px;
+    margin-bottom: 32px;
+  }
+  .login-error {
+    background: var(--danger-light);
+    border: 1px solid var(--danger);
+    color: var(--danger);
+    padding: 10px 14px;
+    border-radius: var(--radius);
+    font-size: 13px;
+    margin-bottom: 16px;
+    display: none;
+  }
+  .login-error.show { display: block; }
+  .login-footer {
+    text-align: center;
+    margin-top: 20px;
+    font-size: 12px;
+    color: var(--text3);
+  }
+  .user-info {
+    display: flex; align-items: center; gap: 8px;
+    padding: 6px 12px;
+    background: var(--accent-light);
+    border-radius: var(--radius);
+    font-size: 13px; color: var(--accent); font-weight: 500;
+  }
+
 </style>
 </head>
 <body>
+
+
+<!-- Login Screen -->
+<div class="login-screen" id="login-screen">
+  <div class="login-card">
+    <div class="login-logo">Records System</div>
+    <div class="login-subtitle">Secure Data Entry Portal — Please login to continue</div>
+    <div class="login-error" id="login-error">Invalid username or password. Please try again.</div>
+    <div class="form-group" style="margin-bottom:16px">
+      <label class="form-label">Username</label>
+      <input class="form-input" id="login-username" type="text" placeholder="Enter username" autocomplete="username" onkeydown="if(event.key==='Enter') document.getElementById('login-password').focus()">
+    </div>
+    <div class="form-group" style="margin-bottom:24px">
+      <label class="form-label">Password</label>
+      <div style="position:relative">
+        <input class="form-input" id="login-password" type="password" placeholder="Enter password" autocomplete="current-password" style="width:100%;padding-right:42px" onkeydown="if(event.key==='Enter') doLogin()">
+        <span onclick="togglePwd()" style="position:absolute;right:12px;top:50%;transform:translateY(-50%);cursor:pointer;opacity:0.5;font-size:16px" id="pwd-eye">👁</span>
+      </div>
+    </div>
+    <button class="btn btn-primary" style="width:100%;justify-content:center;padding:11px" id="login-btn" onclick="doLogin()">
+      <span id="login-btn-text">Login</span>
+    </button>
+    <div class="login-footer">🔒 All data is encrypted and secure</div>
+  </div>
+</div>
+
 
 <div class="app">
   <!-- Sidebar -->
@@ -345,6 +427,8 @@
         <svg class="search-icon" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><line x1="16.5" y1="16.5" x2="22" y2="22"/></svg>
         <input type="text" id="search-input" placeholder="Search by name, EPIC, Aadhaar…" oninput="debounceSearch()">
       </div>
+      <div class="user-info"><svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="12" cy="8" r="4"/><path d="M4 20c0-4 3.6-7 8-7s8 3 8 7"/></svg><span id="user-info-name">admin</span></div>
+      <button class="btn btn-secondary btn-sm" onclick="doLogout()" title="Logout" style="gap:4px"><svg width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg> Logout</button>
       <button class="btn btn-primary" onclick="openAddModal()">
         <svg width="15" height="15" fill="none" stroke="currentColor" stroke-width="2.2" viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
         Add Record
@@ -843,7 +927,79 @@ function confirmDelete(id) {
 function showView(v) { /* only one view for now */ }
 
 // ── Init ──────────────────────────────────────────────────────────────────────
-loadRecords();
+
+// ── Auth ──────────────────────────────────────────────────────────────────────
+let authToken = localStorage.getItem('auth_token') || '';
+
+function setAuthHeader(opts = {}) {
+  return { ...opts, headers: { ...(opts.headers || {}), 'x-auth-token': authToken, 'Content-Type': 'application/json' } };
+}
+
+async function checkAuth() {
+  if (!authToken) { showLogin(); return; }
+  try {
+    const r = await fetch('/api/me', { headers: { 'x-auth-token': authToken } });
+    if (r.ok) {
+      const u = await r.json();
+      document.getElementById('user-info-name').textContent = u.username;
+      hideLogin();
+    } else { showLogin(); }
+  } catch { showLogin(); }
+}
+
+function showLogin() { document.getElementById('login-screen').classList.remove('hidden'); }
+function hideLogin() { document.getElementById('login-screen').classList.add('hidden'); }
+
+async function doLogin() {
+  const username = document.getElementById('login-username').value.trim();
+  const password = document.getElementById('login-password').value;
+  const btn = document.getElementById('login-btn');
+  const errEl = document.getElementById('login-error');
+  errEl.classList.remove('show');
+  if (!username || !password) { errEl.textContent = 'Please enter username and password.'; errEl.classList.add('show'); return; }
+  btn.innerHTML = '<div class="loader"></div>';
+  btn.disabled = true;
+  try {
+    const r = await fetch('/api/login', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ username, password }) });
+    const data = await r.json();
+    if (r.ok && data.token) {
+      authToken = data.token;
+      localStorage.setItem('auth_token', authToken);
+      document.getElementById('user-info-name').textContent = username;
+      hideLogin();
+      loadRecords();
+      loadStats();
+    } else {
+      errEl.textContent = data.error || 'Invalid credentials.';
+      errEl.classList.add('show');
+    }
+  } catch { errEl.textContent = 'Server connection failed.'; errEl.classList.add('show'); }
+  finally { btn.innerHTML = '<span id="login-btn-text">Login</span>'; btn.disabled = false; }
+}
+
+async function doLogout() {
+  await fetch('/api/logout', { method: 'POST', headers: { 'x-auth-token': authToken } });
+  authToken = ''; localStorage.removeItem('auth_token');
+  document.getElementById('login-username').value = '';
+  document.getElementById('login-password').value = '';
+  showLogin();
+}
+
+function togglePwd() {
+  const inp = document.getElementById('login-password');
+  inp.type = inp.type === 'password' ? 'text' : 'password';
+}
+
+// Patch fetch to include auth token
+const _origFetch = window.fetch;
+window.fetch = function(url, opts = {}) {
+  if (typeof url === 'string' && url.startsWith('/api/') && url !== '/api/login') {
+    opts.headers = { ...(opts.headers || {}), 'x-auth-token': authToken };
+  }
+  return _origFetch(url, opts);
+};
+
+checkAuth();
 </script>
 </body>
 </html>
